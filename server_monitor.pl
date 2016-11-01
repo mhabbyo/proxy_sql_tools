@@ -338,6 +338,7 @@ sub get_proxy($$$$){
                                     AND repl_lag IS NULL
                                     AND ms.hostgroup_id='$hgid'
                                     AND ms.hostgroup_id = hg.reader_hostgroup
+                                    AND ms.max_replication_lag = 0
                                 GROUP BY ro.hostname,
                                          ro.port;";
 
@@ -346,7 +347,9 @@ sub get_proxy($$$$){
         $sth->execute();
          while ($ref = $sth->fetchrow_arrayref()) {
             print "@$ref[0] @$ref[1]\n";
-            move_node_down_hg_change($proxynode,@$ref[0],@$ref[1],$Param->{hgid});
+            if (@$ref[0] ne '') {
+                move_node_down_hg_change($proxynode,@$ref[0],@$ref[1],$Param->{hgid});
+            }
 
          }
         }
@@ -538,10 +541,8 @@ The script monitors the read_only flag and the repl_lag. If read_only=1 and repl
 
 Why we need this?
 
-Example 1: If we promote a new master and the old master won't be the a slave of the ne master, the ProxySQL will thought that server now is part of the
+Example: If we promote a new master and the old master won't be the a slave of the ne master, the ProxySQL will thought that server now is part of the
 read hostgroup and going to send reads. But the old master does not part of the replicaset anymore. ProxySQL should not send any traffic.
-
-Example 2: If we run `reset slave all;` on a slave ProxySQL is still going to send traffic, but we should remove that server from the Hostgroup.
 
 =head1 Configure in ProxySQL
 
