@@ -328,8 +328,8 @@ sub get_proxy($$$$){
         my $SQL_get_old_master= "SELECT ro.hostname,
                                        ro.port,
                                        ms.hostgroup_id
-                                FROM monitor.mysql_server_read_only_log ro
-                                LEFT JOIN monitor.mysql_server_replication_lag_log lag ON ro.hostname=lag.hostname
+                                FROM (select *, max(time_start_us) from monitor.mysql_server_read_only_log group by hostname,port) as ro
+                                LEFT JOIN (select *,max(time_start_us) from monitor.mysql_server_replication_lag_log group by hostname,port ) as lag ON ro.hostname=lag.hostname
                                 AND ro.port=lag.port
                                 LEFT JOIN mysql_servers ms ON ro.hostname=ms.hostname
                                 AND ro.port=ms.port,
@@ -338,7 +338,7 @@ sub get_proxy($$$$){
                                     AND repl_lag IS NULL
                                     AND ms.hostgroup_id='$hgid'
                                     AND ms.hostgroup_id = hg.reader_hostgroup
-                                    AND ms.max_replication_lag = 0
+                                    AND ms.status='ONLINE'
                                 GROUP BY ro.hostname,
                                          ro.port;";
 
